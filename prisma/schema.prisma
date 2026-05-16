@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("COMERCIAL")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  calculos  Calculo[]
+  logs      AuditLog[]
+
+  @@map("users")
+}
+
+model Fabricante {
+  id       String    @id @default(cuid())
+  nome     String    @unique
+  calculos Calculo[]
+
+  @@map("fabricantes")
+}
+
+model Distribuidor {
+  id           String    @id @default(cuid())
+  nome         String    @unique
+  markupPadrao Float     @default(30)
+  repassePct   Float     @default(0)
+  calculos     Calculo[]
+
+  @@map("distribuidores")
+}
+
+model Calculo {
+  id            String   @id @default(cuid())
+  modulo        String
+  tipo          String?
+  modalidade    String?
+  status        String   @default("EmAndamento")
+
+  cliente       String?
+  data          DateTime @default(now())
+  descricao     String?
+
+  custoUSD      Float?
+  dolar         Float?
+  custoBRL      Float?
+  markupPct     Float
+  repassePct    Float?
+
+  precoVenda    Float
+  imposto       Float
+  spread4pct    Float?
+  iof438pct     Float?
+  margemBruta   Float?
+  margemLiquida Float?
+  lucroLiquido  Float?
+  lucroPct      Float
+
+  dataStatusGanho      DateTime?
+  dataRecebimento      DateTime?
+  dataPagamentoImposto DateTime?
+
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  fabricanteId   String?
+  fabricante     Fabricante?   @relation(fields: [fabricanteId], references: [id])
+  distribuidorId String?
+  distribuidor   Distribuidor? @relation(fields: [distribuidorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("calculos")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  acao       String
+  entidade   String
+  entidadeId String?
+  detalhes   Json?
+  createdAt  DateTime @default(now())
+
+  @@map("audit_logs")
+}
