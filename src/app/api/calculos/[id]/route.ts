@@ -63,3 +63,28 @@ export async function PATCH(
 
   return NextResponse.json(calculo)
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions)
+  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+  const calculo = await prisma.calculo.findUnique({ where: { id: params.id } })
+  if (!calculo) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
+
+  await prisma.calculo.delete({ where: { id: params.id } })
+
+  await prisma.auditLog.create({
+    data: {
+      userId: session.user.id,
+      acao: 'DELETE',
+      entidade: 'Calculo',
+      entidadeId: params.id,
+      detalhes: { cliente: calculo.cliente, precoVenda: calculo.precoVenda },
+    },
+  })
+
+  return NextResponse.json({ ok: true })
+}
