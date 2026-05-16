@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import AppShell from '@/components/layout/AppShell'
 import { formatBRL, formatPct, cn } from '@/lib/utils'
-import { Search, RefreshCw, Loader2, Calendar, ChevronDown } from 'lucide-react'
+import { Search, RefreshCw, Loader2, Calendar, ChevronDown, Trash2 } from 'lucide-react'
 
 interface Calculo {
   id: string
@@ -124,9 +124,24 @@ function StatusDropdown({
   )
 }
 
-function LinhaCalculo({ c, onStatusChange }: { c: Calculo; onStatusChange: (id: string, dados: Partial<Calculo>) => void }) {
+function LinhaCalculo({ c, onStatusChange, onDelete }: { c: Calculo; onStatusChange: (id: string, dados: Partial<Calculo>) => void; onDelete: (id: string) => void }) {
   const [expandido, setExpandido] = useState(false)
+  const [deleteState, setDeleteState] = useState<'idle' | 'confirm' | 'loading'>('idle')
   const lucro = c.lucroLiquido ?? c.margemLiquida ?? 0
+
+  async function confirmarExclusao() {
+    setDeleteState('loading')
+    try {
+      const res = await fetch(`/api/calculos/${c.id}`, { method: 'DELETE' })
+      if (res.ok) {
+        onDelete(c.id)
+      } else {
+        setDeleteState('idle')
+      }
+    } catch {
+      setDeleteState('idle')
+    }
+  }
 
   return (
     <>
@@ -167,11 +182,43 @@ function LinhaCalculo({ c, onStatusChange }: { c: Calculo; onStatusChange: (id: 
           />
         </td>
         <td className="table-cell text-text-secondary text-xs">{c.user?.name}</td>
+        <td className="table-cell" onClick={e => e.stopPropagation()}>
+          {deleteState === 'idle' && (
+            <button
+              onClick={() => setDeleteState('confirm')}
+              className="p-1.5 rounded-lg transition-all opacity-30 hover:opacity-100 hover:text-danger"
+              title="Excluir"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {deleteState === 'confirm' && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={confirmarExclusao}
+                className="px-2 py-1 rounded text-xs font-semibold text-white transition-colors"
+                style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)' }}
+              >
+                Sim
+              </button>
+              <button
+                onClick={() => setDeleteState('idle')}
+                className="px-2 py-1 rounded text-xs text-text-secondary transition-colors hover:text-white"
+                style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                Não
+              </button>
+            </div>
+          )}
+          {deleteState === 'loading' && (
+            <Loader2 className="w-3.5 h-3.5 text-danger animate-spin" />
+          )}
+        </td>
       </tr>
 
       {expandido && c.status === 'Ganho' && (
         <tr className="bg-neon/3">
-          <td colSpan={11} className="px-4 py-3">
+          <td colSpan={12} className="px-4 py-3">
             <div className="flex items-center gap-2 mb-2">
               <Calendar className="w-3.5 h-3.5 text-neon" />
               <span className="text-xs font-semibold text-neon uppercase tracking-wider">Cronograma financeiro</span>
@@ -232,6 +279,11 @@ function HistoricoContent() {
 
   function atualizarStatus(id: string, dados: Partial<Calculo>) {
     setCalculos(prev => prev.map(c => c.id === id ? { ...c, ...dados } : c))
+  }
+
+  function excluirCalculo(id: string) {
+    setCalculos(prev => prev.filter(c => c.id !== id))
+    setTotal(prev => prev - 1)
   }
 
   const calculosFiltrados = busca
@@ -313,11 +365,12 @@ function HistoricoContent() {
                   <th className="table-header text-right">Margem</th>
                   <th className="table-header">Status</th>
                   <th className="table-header">Usuário</th>
+                  <th className="table-header w-10"></th>
                 </tr>
               </thead>
               <tbody>
                 {calculosFiltrados.map(c => (
-                  <LinhaCalculo key={c.id} c={c} onStatusChange={atualizarStatus} />
+                  <LinhaCalculo key={c.id} c={c} onStatusChange={atualizarStatus} onDelete={excluirCalculo} />
                 ))}
               </tbody>
             </table>
