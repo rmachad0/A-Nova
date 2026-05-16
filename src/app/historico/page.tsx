@@ -146,7 +146,7 @@ function LinhaCalculo({ c, onStatusChange, onDelete }: { c: Calculo; onStatusCha
   return (
     <>
       <tr
-        className="table-row-hover cursor-pointer"
+        className="table-row-hover cursor-pointer group"
         onClick={() => c.status === 'Ganho' && setExpandido(!expandido)}
       >
         <td className="table-cell text-text-secondary text-xs">
@@ -186,8 +186,8 @@ function LinhaCalculo({ c, onStatusChange, onDelete }: { c: Calculo; onStatusCha
           {deleteState === 'idle' && (
             <button
               onClick={() => setDeleteState('confirm')}
-              className="p-1.5 rounded-lg transition-all opacity-30 hover:opacity-100 hover:text-danger"
-              title="Excluir"
+              className="p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100 hover:text-danger text-text-secondary"
+              title="Excluir linha"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
