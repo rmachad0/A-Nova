@@ -26,9 +26,18 @@ export default function RegistroPage() {
   }
   const forca = forcaSenha()
 
+  const DOMINIO = 'anovasolucao.net'
+  const emailValido = email.toLowerCase().endsWith(`@${DOMINIO}`)
+  const emailDigitado = email.includes('@')
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setErro('')
+
+    if (!emailValido) {
+      setErro(`Somente e-mails @${DOMINIO} são permitidos.`)
+      return
+    }
 
     if (senha !== confirmar) { setErro('As senhas não coincidem.'); return }
 
@@ -102,10 +111,25 @@ export default function RegistroPage() {
                     type="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    placeholder="seu@email.com"
-                    className="input-field"
+                    placeholder={`seu@${DOMINIO}`}
+                    className={`input-field ${emailDigitado && !emailValido ? 'border-danger/50 focus:border-danger/70' : emailDigitado && emailValido ? 'border-neon/40' : ''}`}
                     required
                   />
+                  {emailDigitado && !emailValido && (
+                    <p className="text-xs text-danger mt-1.5 flex items-center gap-1">
+                      <span>⚠</span> Somente e-mails <strong>@{DOMINIO}</strong> são permitidos
+                    </p>
+                  )}
+                  {emailDigitado && emailValido && (
+                    <p className="text-xs text-neon mt-1.5 flex items-center gap-1">
+                      <span>✓</span> E-mail corporativo válido
+                    </p>
+                  )}
+                  {!emailDigitado && (
+                    <p className="text-xs mt-1.5" style={{ color: '#444' }}>
+                      Restrito a e-mails <span className="text-text-secondary">@{DOMINIO}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div>
