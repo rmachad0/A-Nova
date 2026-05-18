@@ -8,7 +8,7 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, Cell
 } from 'recharts'
-import { Loader2, TrendingDown, DollarSign, Receipt, Banknote, ArrowUpRight, X, ChevronRight } from 'lucide-react'
+import { Loader2, TrendingDown, DollarSign, Receipt, Banknote, ArrowUpRight, X, ChevronRight, Filter } from 'lucide-react'
 
 const NEON = '#39FF14'
 
@@ -84,26 +84,53 @@ function formatarValor(v: number, campo: Campo) {
 
 // ─── Modal drill-down ──────────────────────────────────────────────────────────
 
+const STATUS_COR: Record<string, string> = {
+  Ganho: '#39FF14',
+  Perdido: '#FF3B3B',
+  EmAndamento: '#FFB800',
+}
+
 function DrillDownModal({ drill, calculos, anoAtual, onClose }: {
   drill: DrillDown
   calculos: CalculoItem[]
   anoAtual: number
   onClose: () => void
 }) {
-  const filtrados = calculos
+  const [filtroStatus, setFiltroStatus] = useState('')
+  const [dataInicio, setDataInicio] = useState('')
+  const [dataFim, setDataFim] = useState('')
+
+  // Base: filtro por mês do drill-down + campo com valor
+  const base = calculos
     .filter(c => drill.mes === undefined || c.mesNum === drill.mes)
     .filter(c => valorCampo(c, drill.campo) !== 0)
+
+  // Aplica filtros do usuário
+  const filtrados = base
+    .filter(c => !filtroStatus || c.status === filtroStatus)
+    .filter(c => {
+      if (!dataInicio && !dataFim) return true
+      const d = new Date(c.data)
+      if (dataInicio && d < new Date(dataInicio)) return false
+      if (dataFim && d > new Date(dataFim + 'T23:59:59')) return false
+      return true
+    })
     .sort((a, b) => valorCampo(b, drill.campo) - valorCampo(a, drill.campo))
 
   const total = filtrados.reduce((s, c) => s + valorCampo(c, drill.campo), 0)
+  const totalBase = base.reduce((s, c) => s + valorCampo(c, drill.campo), 0)
   const colLabel = CAMPOS_LABEL[drill.campo]
+  const filtrosAtivos = !!(filtroStatus || dataInicio || dataFim)
+
+  // Conta por status no base (para exibir nos botões)
+  const contaStatus = (s: string) => base.filter(c => c.status === s).length
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
       onClick={onClose}>
       <div
-        className="w-full max-w-3xl max-h-[85vh] flex flex-col rounded-2xl overflow-hidden"
+        className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden"
         style={{
           background: 'linear-gradient(135deg, rgba(18,18,18,0.98) 0%, rgba(12,12,12,0.98) 100%)',
           border: `1px solid ${drill.cor}25`,
@@ -120,10 +147,15 @@ function DrillDownModal({ drill, calculos, anoAtual, onClose }: {
             </p>
             <h2 className="text-lg font-bold text-white">{drill.titulo}</h2>
             <p className="text-sm mt-0.5" style={{ color: '#555' }}>
-              {filtrados.length} oportunidade{filtrados.length !== 1 ? 's' : ''} · Total:{' '}
+              {filtrados.length} oportunidade{filtrados.length !== 1 ? 's' : ''}
+              {filtrosAtivos && <span style={{ color: '#444' }}> (de {base.length} no período)</span>}
+              {' '}· Total:{' '}
               <span className="font-semibold" style={{ color: drill.cor }}>
                 {formatarValor(total, drill.campo)}
               </span>
+              {filtrosAtivos && totalBase !== total && (
+                <span style={{ color: '#444' }}> de {formatarValor(totalBase, drill.campo)}</span>
+              )}
             </p>
           </div>
           <button onClick={onClose}
@@ -133,12 +165,90 @@ function DrillDownModal({ drill, calculos, anoAtual, onClose }: {
           </button>
         </div>
 
+        {/* ── Filtros ── */}
+        <div className="px-5 py-3 flex-shrink-0 flex flex-wrap items-center gap-3"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.01)' }}>
+
+          {/* Filtro Status */}
+          <div className="flex items-center gap-1.5">
+            <Filter className="w-3 h-3 flex-shrink-0" style={{ color: '#444' }} />
+            <span className="text-[10px] font-bold uppercase tracking-wider mr-1" style={{ color: '#444' }}>Status</span>
+            {(['', 'Ganho', 'Perdido', 'EmAndamento'] as const).map(s => {
+              const label = s === '' ? 'Todos' : STATUS_LABEL[s]
+              const ativo = filtroStatus === s
+              const cor = s ? STATUS_COR[s] : '#888'
+              const count = s === '' ? base.length : contaStatus(s)
+              return (
+                <button
+                  key={s}
+                  onClick={() => setFiltroStatus(s)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
+                  style={{
+                    background: ativo ? `${cor}18` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${ativo ? `${cor}40` : 'rgba(255,255,255,0.06)'}`,
+                    color: ativo ? cor : '#555',
+                  }}
+                >
+                  {label}
+                  <span className="rounded px-1 text-[10px]"
+                    style={{ background: ativo ? `${cor}20` : 'rgba(255,255,255,0.05)', color: ativo ? cor : '#444' }}>
+                    {count}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Separador */}
+          <div className="h-5 w-px flex-shrink-0" style={{ background: 'rgba(255,255,255,0.06)' }} />
+
+          {/* Filtro Data */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#444' }}>Período</span>
+            <input
+              type="date"
+              value={dataInicio}
+              onChange={e => setDataInicio(e.target.value)}
+              className="text-xs rounded-lg px-2.5 py-1.5 transition-colors"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: dataInicio ? '#fff' : '#555', colorScheme: 'dark' }}
+            />
+            <span className="text-xs" style={{ color: '#444' }}>até</span>
+            <input
+              type="date"
+              value={dataFim}
+              onChange={e => setDataFim(e.target.value)}
+              className="text-xs rounded-lg px-2.5 py-1.5 transition-colors"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: dataFim ? '#fff' : '#555', colorScheme: 'dark' }}
+            />
+            {(dataInicio || dataFim) && (
+              <button
+                onClick={() => { setDataInicio(''); setDataFim('') }}
+                className="text-xs px-2 py-1 rounded-lg transition-colors hover:text-white"
+                style={{ color: '#555', border: '1px solid rgba(255,255,255,0.06)' }}
+              >
+                Limpar
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Tabela */}
         <div className="overflow-y-auto flex-1">
           {filtrados.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-2">
-              <p className="text-white font-medium">Nenhuma cotação neste período</p>
-              <p className="text-sm" style={{ color: '#555' }}>Sem valores registrados</p>
+              <p className="text-white font-medium">Nenhuma cotação encontrada</p>
+              <p className="text-sm" style={{ color: '#555' }}>
+                {filtrosAtivos ? 'Tente ajustar os filtros' : 'Sem valores registrados'}
+              </p>
+              {filtrosAtivos && (
+                <button
+                  onClick={() => { setFiltroStatus(''); setDataInicio(''); setDataFim('') }}
+                  className="mt-2 text-xs px-3 py-1.5 rounded-lg transition-colors"
+                  style={{ background: 'rgba(57,255,20,0.08)', border: '1px solid rgba(57,255,20,0.15)', color: '#39FF14' }}
+                >
+                  Limpar filtros
+                </button>
+              )}
             </div>
           ) : (
             <table className="w-full text-sm">
