@@ -71,20 +71,37 @@ export async function PUT(
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-  const { cliente, descricao, tipo, modulo } = await request.json()
+  const { cliente, descricao, tipo, modulo, fabricanteNome } = await request.json()
 
   const modulosValidos = ['Direto', 'Estrangeiro', 'Distribuidor']
   if (modulo !== undefined && !modulosValidos.includes(modulo)) {
     return NextResponse.json({ error: 'Módulo inválido' }, { status: 400 })
   }
 
+  // Resolve fabricanteId a partir do nome
+  let fabricanteId: string | null | undefined = undefined
+  if (fabricanteNome !== undefined) {
+    if (!fabricanteNome || fabricanteNome.trim() === '') {
+      fabricanteId = null
+    } else {
+      const nome = fabricanteNome.trim()
+      const fab = await prisma.fabricante.upsert({
+        where: { nome },
+        update: {},
+        create: { nome },
+      })
+      fabricanteId = fab.id
+    }
+  }
+
   const calculo = await prisma.calculo.update({
     where: { id: params.id },
     data: {
-      cliente:   cliente   !== undefined ? (cliente   || null) : undefined,
-      descricao: descricao !== undefined ? (descricao || null) : undefined,
-      tipo:      tipo      !== undefined ? tipo       : undefined,
-      modulo:    modulo    !== undefined ? modulo     : undefined,
+      cliente:      cliente      !== undefined ? (cliente   || null) : undefined,
+      descricao:    descricao    !== undefined ? (descricao || null) : undefined,
+      tipo:         tipo         !== undefined ? tipo       : undefined,
+      modulo:       modulo       !== undefined ? modulo     : undefined,
+      fabricanteId: fabricanteId !== undefined ? fabricanteId : undefined,
     },
     include: { user: { select: { name: true } }, fabricante: true, distribuidor: true },
   })
@@ -95,7 +112,7 @@ export async function PUT(
       acao: 'UPDATE',
       entidade: 'Calculo',
       entidadeId: params.id,
-      detalhes: { cliente, descricao, tipo, modulo },
+      detalhes: { cliente, descricao, tipo, modulo, fabricanteNome },
     },
   })
 

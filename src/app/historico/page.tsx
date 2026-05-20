@@ -134,8 +134,17 @@ function EditModal({ c, onSave, onClose }: {
   const [descricao, setDescricao] = useState(c.descricao ?? '')
   const [tipo, setTipo] = useState(c.tipo ?? '')
   const [modulo, setModulo] = useState(c.modulo)
+  const [fabricanteNome, setFabricanteNome] = useState(c.fabricante?.nome ?? '')
+  const [fabricantesDisponiveis, setFabricantesDisponiveis] = useState<string[]>([])
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
+
+  useEffect(() => {
+    fetch('/api/fabricantes')
+      .then(r => r.json())
+      .then((lista: { nome: string }[]) => setFabricantesDisponiveis(lista.map(f => f.nome)))
+      .catch(() => {})
+  }, [])
 
   async function salvar() {
     setSalvando(true)
@@ -144,11 +153,17 @@ function EditModal({ c, onSave, onClose }: {
       const res = await fetch(`/api/calculos/${c.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cliente, descricao, tipo, modulo }),
+        body: JSON.stringify({ cliente, descricao, tipo, modulo, fabricanteNome }),
       })
       if (res.ok) {
         const dados = await res.json()
-        onSave(c.id, { cliente: dados.cliente, descricao: dados.descricao, tipo: dados.tipo, modulo: dados.modulo })
+        onSave(c.id, {
+          cliente: dados.cliente,
+          descricao: dados.descricao,
+          tipo: dados.tipo,
+          modulo: dados.modulo,
+          fabricante: dados.fabricante ?? null,
+        })
         onClose()
       } else {
         setErro('Erro ao salvar. Tente novamente.')
@@ -226,16 +241,41 @@ function EditModal({ c, onSave, onClose }: {
             </div>
           </div>
 
-          {/* Cliente */}
-          <div>
-            <label className="label">Cliente</label>
-            <input
-              value={cliente}
-              onChange={e => setCliente(e.target.value)}
-              placeholder="Nome do cliente"
-              className="input-field"
-              autoFocus
-            />
+          {/* Cliente + Fabricante lado a lado */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Cliente</label>
+              <input
+                value={cliente}
+                onChange={e => setCliente(e.target.value)}
+                placeholder="Nome do cliente"
+                className="input-field"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="label">Fabricante</label>
+              <input
+                value={fabricanteNome}
+                onChange={e => setFabricanteNome(e.target.value)}
+                placeholder="Nome do fabricante"
+                className="input-field"
+                list="fabricantes-list"
+              />
+              <datalist id="fabricantes-list">
+                {fabricantesDisponiveis.map(f => <option key={f} value={f} />)}
+              </datalist>
+              {fabricanteNome && !fabricantesDisponiveis.includes(fabricanteNome) && (
+                <p className="text-[10px] mt-1 text-neon opacity-70">
+                  ✦ Será criado como novo fabricante
+                </p>
+              )}
+              {fabricanteNome && fabricantesDisponiveis.includes(fabricanteNome) && (
+                <p className="text-[10px] mt-1" style={{ color: '#444' }}>
+                  ✓ Fabricante existente
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Tipo */}
