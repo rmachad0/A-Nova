@@ -18,6 +18,7 @@ export default function TabDistribuidor() {
   const [markupPct, setMarkupPct] = useState(35)
   const [repassePct, setRepassePct] = useState(5)
   const [status, setStatus] = useState<StatusVenda>('Em andamento')
+  const [descricao, setDescricao] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [confirmBloquear, setConfirmBloquear] = useState(false)
   const [mensagem, setMensagem] = useState('')
@@ -32,7 +33,7 @@ export default function TabDistribuidor() {
   function limpar() {
     setCustoBRL(''); setMarkupPct(35); setRepassePct(5)
     setCliente(''); setDistribuidor(''); setStatus('Em andamento')
-    setConfirmBloquear(false); setMensagem('')
+    setDescricao(''); setConfirmBloquear(false); setMensagem('')
   }
 
   async function salvar() {
@@ -56,6 +57,7 @@ export default function TabDistribuidor() {
           imposto: resultado.imposto,
           margemLiquida: resultado.margemLiquida,
           lucroPct: resultado.lucroPct,
+          descricao: descricao || undefined,
         }),
       })
       if (res.ok) {
@@ -114,6 +116,18 @@ export default function TabDistribuidor() {
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-sm">R$</span>
             <input type="number" value={custoBRL} onChange={e => setCustoBRL(e.target.value)} className="input-field pl-9" placeholder="0,00" min="0" step="0.01" />
           </div>
+        </div>
+
+        <div>
+          <label className="label">Comentário / Notas da proposta</label>
+          <textarea
+            value={descricao}
+            onChange={e => setDescricao(e.target.value)}
+            placeholder="Observações sobre o cliente, condições da proposta, prazo de entrega..."
+            rows={3}
+            className="input-field resize-none"
+            style={{ lineHeight: '1.5' }}
+          />
         </div>
 
         <MarkupSlider value={markupPct} onChange={setMarkupPct} presets={MARKUPS_DIST} />

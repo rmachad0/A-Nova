@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import AppShell from '@/components/layout/AppShell'
 import { formatBRL, formatPct, cn } from '@/lib/utils'
-import { Search, RefreshCw, Loader2, Calendar, ChevronDown, Trash2 } from 'lucide-react'
+import { Search, RefreshCw, Loader2, Calendar, ChevronDown, Trash2, Pencil, X, FileText } from 'lucide-react'
 
 interface Calculo {
   id: string
@@ -12,6 +12,7 @@ interface Calculo {
   tipo: string | null
   status: string
   cliente: string | null
+  descricao: string | null
   data: string
   custoBRL: number | null
   markupPct: number
@@ -124,7 +125,157 @@ function StatusDropdown({
   )
 }
 
-function LinhaCalculo({ c, onStatusChange, onDelete }: { c: Calculo; onStatusChange: (id: string, dados: Partial<Calculo>) => void; onDelete: (id: string) => void }) {
+function EditModal({ c, onSave, onClose }: {
+  c: Calculo
+  onSave: (id: string, dados: Partial<Calculo>) => void
+  onClose: () => void
+}) {
+  const [cliente, setCliente] = useState(c.cliente ?? '')
+  const [descricao, setDescricao] = useState(c.descricao ?? '')
+  const [tipo, setTipo] = useState(c.tipo ?? '')
+  const [salvando, setSalvando] = useState(false)
+  const [erro, setErro] = useState('')
+
+  async function salvar() {
+    setSalvando(true)
+    setErro('')
+    try {
+      const res = await fetch(`/api/calculos/${c.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cliente, descricao, tipo }),
+      })
+      if (res.ok) {
+        const dados = await res.json()
+        onSave(c.id, { cliente: dados.cliente, descricao: dados.descricao, tipo: dados.tipo })
+        onClose()
+      } else {
+        setErro('Erro ao salvar. Tente novamente.')
+      }
+    } catch {
+      setErro('Erro de conexão.')
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
+      onClick={onClose}>
+      <div
+        className="w-full max-w-lg rounded-2xl overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, rgba(18,18,18,0.98) 0%, rgba(12,12,12,0.98) 100%)',
+          border: '1px solid rgba(57,255,20,0.15)',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.8), 0 0 40px rgba(57,255,20,0.04)',
+        }}
+        onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em]" style={{ color: '#444' }}>Histórico</p>
+            <h2 className="text-base font-bold text-white">Editar cotação</h2>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl hover:text-white transition-colors"
+            style={{ color: '#555', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Campos */}
+        <div className="px-6 py-5 space-y-4">
+          {/* Info read-only */}
+          <div className="flex items-center gap-3 rounded-xl px-4 py-3 text-xs"
+            style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <span className={cn('px-2 py-0.5 rounded font-medium border text-xs',
+              c.modulo === 'Direto' ? 'bg-neon/10 text-neon border-neon/20'
+              : c.modulo === 'Estrangeiro' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+              : 'bg-purple-500/10 text-purple-400 border-purple-500/20')}>
+              {c.modulo}
+            </span>
+            <span style={{ color: '#555' }}>{new Date(c.data).toLocaleDateString('pt-BR')}</span>
+            <span style={{ color: '#555' }}>·</span>
+            <span style={{ color: '#555' }}>{c.tipo === 'Servico' ? 'Serviço' : c.tipo ?? '—'}</span>
+          </div>
+
+          {/* Cliente */}
+          <div>
+            <label className="label">Cliente</label>
+            <input
+              value={cliente}
+              onChange={e => setCliente(e.target.value)}
+              placeholder="Nome do cliente"
+              className="input-field"
+              autoFocus
+            />
+          </div>
+
+          {/* Tipo */}
+          <div>
+            <label className="label">Tipo de NF</label>
+            <div className="flex gap-2">
+              {[
+                { val: 'Produto', label: 'Produto (10%)' },
+                { val: 'Servico', label: 'Serviço (20%)' },
+              ].map(t => (
+                <button
+                  key={t.val}
+                  onClick={() => setTipo(t.val)}
+                  className={cn('flex-1 py-2 rounded-lg text-sm font-medium transition-all border',
+                    tipo === t.val
+                      ? 'bg-neon/10 border-neon/30 text-neon'
+                      : 'border-border text-text-secondary hover:text-white'
+                  )}
+                  style={tipo !== t.val ? { background: 'rgba(255,255,255,0.02)' } : {}}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Comentário */}
+          <div>
+            <label className="label flex items-center gap-1.5">
+              <FileText className="w-3 h-3" /> Comentário / Notas da proposta
+            </label>
+            <textarea
+              value={descricao}
+              onChange={e => setDescricao(e.target.value)}
+              placeholder="Observações sobre o cliente, condições negociadas, prazo de entrega..."
+              rows={4}
+              className="input-field resize-none"
+              style={{ lineHeight: '1.6' }}
+            />
+            <p className="text-xs mt-1" style={{ color: '#444' }}>{descricao.length} caracteres</p>
+          </div>
+
+          {erro && (
+            <div className="rounded-lg px-3 py-2 text-sm text-danger"
+              style={{ background: 'rgba(255,59,59,0.08)', border: '1px solid rgba(255,59,59,0.2)' }}>
+              {erro}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 flex gap-3"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <button onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
+          <button onClick={salvar} disabled={salvando} className="btn-primary flex-1 flex items-center justify-center gap-2">
+            {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pencil className="w-4 h-4" />}
+            {salvando ? 'Salvando...' : 'Salvar alterações'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function LinhaCalculo({ c, onStatusChange, onDelete, onEdit }: { c: Calculo; onStatusChange: (id: string, dados: Partial<Calculo>) => void; onDelete: (id: string) => void; onEdit: (c: Calculo) => void }) {
   const [expandido, setExpandido] = useState(false)
   const [deleteState, setDeleteState] = useState<'idle' | 'confirm' | 'loading'>('idle')
   const lucro = c.lucroLiquido ?? c.margemLiquida ?? 0
@@ -146,8 +297,8 @@ function LinhaCalculo({ c, onStatusChange, onDelete }: { c: Calculo; onStatusCha
   return (
     <>
       <tr
-        className="table-row-hover cursor-pointer group"
-        onClick={() => c.status === 'Ganho' && setExpandido(!expandido)}
+        className={cn('table-row-hover group', (c.status === 'Ganho' || c.descricao) ? 'cursor-pointer' : '')}
+        onClick={() => (c.status === 'Ganho' || c.descricao) && setExpandido(!expandido)}
       >
         <td className="table-cell text-text-secondary text-xs">
           {new Date(c.data).toLocaleDateString('pt-BR')}
@@ -183,6 +334,16 @@ function LinhaCalculo({ c, onStatusChange, onDelete }: { c: Calculo; onStatusCha
         </td>
         <td className="table-cell text-text-secondary text-xs">{c.user?.name}</td>
         <td className="table-cell" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center gap-1">
+            {/* Botão editar */}
+            <button
+              onClick={() => onEdit(c)}
+              className="p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100 hover:text-neon text-text-secondary"
+              title="Editar cotação"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+
           {deleteState === 'idle' && (
             <button
               onClick={() => setDeleteState('confirm')}
@@ -213,12 +374,32 @@ function LinhaCalculo({ c, onStatusChange, onDelete }: { c: Calculo; onStatusCha
           {deleteState === 'loading' && (
             <Loader2 className="w-3.5 h-3.5 text-danger animate-spin" />
           )}
+          </div>
         </td>
       </tr>
+
+      {expandido && c.descricao && c.status !== 'Ganho' && (
+        <tr>
+          <td colSpan={12} className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+            <div className="flex items-start gap-2 rounded-xl px-3 py-2.5"
+              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <FileText className="w-3.5 h-3.5 text-text-secondary flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-text-secondary leading-relaxed">{c.descricao}</p>
+            </div>
+          </td>
+        </tr>
+      )}
 
       {expandido && c.status === 'Ganho' && (
         <tr className="bg-neon/3">
           <td colSpan={12} className="px-4 py-3">
+            {c.descricao && (
+              <div className="mb-3 flex items-start gap-2 rounded-xl px-3 py-2.5"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <FileText className="w-3.5 h-3.5 text-text-secondary flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-text-secondary leading-relaxed">{c.descricao}</p>
+              </div>
+            )}
             <div className="flex items-center gap-2 mb-2">
               <Calendar className="w-3.5 h-3.5 text-neon" />
               <span className="text-xs font-semibold text-neon uppercase tracking-wider">Cronograma financeiro</span>
@@ -251,6 +432,7 @@ function HistoricoContent() {
 
   const [calculos, setCalculos] = useState<Calculo[]>([])
   const [total, setTotal] = useState(0)
+  const [editando, setEditando] = useState<Calculo | null>(null)
   const [page, setPage] = useState(1)
   const [pages, setPages] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -286,6 +468,10 @@ function HistoricoContent() {
     setTotal(prev => prev - 1)
   }
 
+  function salvarEdicao(id: string, dados: Partial<Calculo>) {
+    setCalculos(prev => prev.map(c => c.id === id ? { ...c, ...dados } : c))
+  }
+
   const calculosFiltrados = busca
     ? calculos.filter(c =>
         c.cliente?.toLowerCase().includes(busca.toLowerCase()) ||
@@ -297,6 +483,13 @@ function HistoricoContent() {
 
   return (
     <div className="p-6 lg:p-8 space-y-6 animate-in">
+      {editando && (
+        <EditModal
+          c={editando}
+          onSave={salvarEdicao}
+          onClose={() => setEditando(null)}
+        />
+      )}
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.15em] mb-1" style={{ color: '#444' }}>Cotações</p>
@@ -370,7 +563,7 @@ function HistoricoContent() {
               </thead>
               <tbody>
                 {calculosFiltrados.map(c => (
-                  <LinhaCalculo key={c.id} c={c} onStatusChange={atualizarStatus} onDelete={excluirCalculo} />
+                  <LinhaCalculo key={c.id} c={c} onStatusChange={atualizarStatus} onDelete={excluirCalculo} onEdit={setEditando} />
                 ))}
               </tbody>
             </table>
