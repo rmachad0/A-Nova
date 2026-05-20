@@ -71,14 +71,20 @@ export async function PUT(
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-  const { cliente, descricao, tipo } = await request.json()
+  const { cliente, descricao, tipo, modulo } = await request.json()
+
+  const modulosValidos = ['Direto', 'Estrangeiro', 'Distribuidor']
+  if (modulo !== undefined && !modulosValidos.includes(modulo)) {
+    return NextResponse.json({ error: 'Módulo inválido' }, { status: 400 })
+  }
 
   const calculo = await prisma.calculo.update({
     where: { id: params.id },
     data: {
-      cliente:   cliente  !== undefined ? (cliente  || null) : undefined,
+      cliente:   cliente   !== undefined ? (cliente   || null) : undefined,
       descricao: descricao !== undefined ? (descricao || null) : undefined,
-      tipo:      tipo     !== undefined ? tipo      : undefined,
+      tipo:      tipo      !== undefined ? tipo       : undefined,
+      modulo:    modulo    !== undefined ? modulo     : undefined,
     },
     include: { user: { select: { name: true } }, fabricante: true, distribuidor: true },
   })
@@ -89,7 +95,7 @@ export async function PUT(
       acao: 'UPDATE',
       entidade: 'Calculo',
       entidadeId: params.id,
-      detalhes: { cliente, descricao, tipo },
+      detalhes: { cliente, descricao, tipo, modulo },
     },
   })
 

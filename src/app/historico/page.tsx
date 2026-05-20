@@ -133,6 +133,7 @@ function EditModal({ c, onSave, onClose }: {
   const [cliente, setCliente] = useState(c.cliente ?? '')
   const [descricao, setDescricao] = useState(c.descricao ?? '')
   const [tipo, setTipo] = useState(c.tipo ?? '')
+  const [modulo, setModulo] = useState(c.modulo)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
 
@@ -143,11 +144,11 @@ function EditModal({ c, onSave, onClose }: {
       const res = await fetch(`/api/calculos/${c.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cliente, descricao, tipo }),
+        body: JSON.stringify({ cliente, descricao, tipo, modulo }),
       })
       if (res.ok) {
         const dados = await res.json()
-        onSave(c.id, { cliente: dados.cliente, descricao: dados.descricao, tipo: dados.tipo })
+        onSave(c.id, { cliente: dados.cliente, descricao: dados.descricao, tipo: dados.tipo, modulo: dados.modulo })
         onClose()
       } else {
         setErro('Erro ao salvar. Tente novamente.')
@@ -199,6 +200,30 @@ function EditModal({ c, onSave, onClose }: {
             <span style={{ color: '#555' }}>{new Date(c.data).toLocaleDateString('pt-BR')}</span>
             <span style={{ color: '#555' }}>·</span>
             <span style={{ color: '#555' }}>{c.tipo === 'Servico' ? 'Serviço' : c.tipo ?? '—'}</span>
+          </div>
+
+          {/* Módulo de faturamento */}
+          <div>
+            <label className="label">Tipo de faturamento</label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { val: 'Direto',       label: 'Faturamento Direto',     emoji: '🏠', cor: '#39FF14',  bg: 'rgba(57,255,20,0.08)',   border: 'rgba(57,255,20,0.25)'   },
+                { val: 'Estrangeiro',  label: 'Fabricante Estrangeiro', emoji: '🌎', cor: '#00D4FF',  bg: 'rgba(0,212,255,0.08)',   border: 'rgba(0,212,255,0.25)'   },
+                { val: 'Distribuidor', label: 'Via Distribuidor',       emoji: '🏢', cor: '#A855F7',  bg: 'rgba(168,85,247,0.08)',  border: 'rgba(168,85,247,0.25)'  },
+              ].map(m => (
+                <button
+                  key={m.val}
+                  onClick={() => setModulo(m.val)}
+                  className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl text-xs font-medium transition-all border"
+                  style={modulo === m.val
+                    ? { background: m.bg, border: `1px solid ${m.border}`, color: m.cor }
+                    : { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', color: '#555' }}
+                >
+                  <span className="text-lg">{m.emoji}</span>
+                  <span className="text-center leading-tight">{m.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Cliente */}
