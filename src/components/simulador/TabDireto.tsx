@@ -27,6 +27,7 @@ export default function TabDireto() {
   const [custoBRL, setCustoBRL] = useState('')
   const [markupPct, setMarkupPct] = useState(40)
   const [status, setStatus] = useState<StatusVenda>('Em andamento')
+  const [descricao, setDescricao] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [confirmBloquear, setConfirmBloquear] = useState(false)
   const [mensagem, setMensagem] = useState('')
@@ -51,7 +52,7 @@ export default function TabDireto() {
     setCustoUSD(''); setDolar(''); setCustoBRL('')
     setMarkupPct(40); setCliente(''); setFabricante('')
     setDistribuidor(''); setStatus('Em andamento')
-    setConfirmBloquear(false); setMensagem('')
+    setDescricao(''); setConfirmBloquear(false); setMensagem('')
   }
 
   async function salvar() {
@@ -79,6 +80,7 @@ export default function TabDireto() {
           imposto: resultado.imposto,
           lucroLiquido: resultado.lucroLiquido,
           lucroPct: resultado.lucroPct,
+          descricao: descricao || undefined,
         }),
       })
       if (res.ok) {
@@ -204,6 +206,18 @@ export default function TabDireto() {
               </div>
             </div>
           )}
+        </div>
+
+        <div>
+          <label className="label">Comentário / Notas da proposta</label>
+          <textarea
+            value={descricao}
+            onChange={e => setDescricao(e.target.value)}
+            placeholder="Observações sobre o cliente, condições da proposta, prazo de entrega..."
+            rows={3}
+            className="input-field resize-none"
+            style={{ lineHeight: '1.5' }}
+          />
         </div>
 
         <MarkupSlider value={markupPct} onChange={setMarkupPct} presets={MARKUPS_DIRETO} />

@@ -18,6 +18,10 @@ export async function GET() {
       },
     },
     orderBy: { data: 'asc' },
+    include: {
+      fabricante:   { select: { nome: true } },
+      distribuidor: { select: { nome: true } },
+    },
   })
 
   // Agrupa por mês
@@ -106,6 +110,25 @@ export async function GET() {
   const impostosProduto = calculos.filter(c => c.tipo === 'Produto').reduce((a, c) => a + c.imposto, 0)
   const impostosServico = calculos.filter(c => c.tipo === 'Servico').reduce((a, c) => a + c.imposto, 0)
 
+  // Retorna apenas os campos necessários para drill-down (sem senha etc.)
+  const calculosLista = calculos.map(c => ({
+    id:           c.id,
+    cliente:      c.cliente,
+    data:         c.data,
+    tipo:         c.tipo,
+    modulo:       c.modulo,
+    status:       c.status,
+    precoVenda:   c.precoVenda,
+    imposto:      c.imposto,
+    custoUSD:     c.custoUSD,
+    custoBRL:     c.custoBRL,
+    lucroLiquido: c.lucroLiquido ?? c.margemLiquida ?? 0,
+    iof438pct:    c.iof438pct ?? 0,
+    spread4pct:   c.spread4pct ?? 0,
+    mesNum:       new Date(c.data).getMonth() + 1,
+    fabricante:   c.fabricante?.nome ?? c.distribuidor?.nome ?? null,
+  }))
+
   return NextResponse.json({
     porMes,
     acumuladoAno,
@@ -116,5 +139,6 @@ export async function GET() {
     impostosServico,
     anoAtual,
     mesAtual,
+    calculos: calculosLista,
   })
 }

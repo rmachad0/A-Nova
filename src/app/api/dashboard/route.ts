@@ -98,8 +98,8 @@ export async function GET() {
   if (taxaConversao < 40 && totalCotacoes >= 3) {
     sugestoes.push({
       tipo: 'alerta',
-      titulo: `Taxa de conversão em ${taxaConversao.toFixed(0)}% — abaixo do ideal`,
-      descricao: `De ${totalCotacoes} cotações geradas, apenas ${cotacoesGanhas} foram fechadas. Revise a abordagem nas etapas finais da negociação e faça follow-up com os clientes perdidos.`,
+      titulo: `Taxa de conversão em ${taxaConversao.toFixed(0)}% — ideal é ≥ 40%`,
+      descricao: `De ${totalCotacoes} cotações geradas, apenas ${cotacoesGanhas} foram fechadas (ideal: 40% ou mais). Revise a abordagem nas etapas finais da negociação e faça follow-up com os clientes perdidos.`,
     })
   }
 

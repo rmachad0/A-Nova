@@ -7,11 +7,12 @@ import Sidebar from './Sidebar'
 import { Menu, Zap } from 'lucide-react'
 
 const PAGE_TITLES: Record<string, string> = {
-  '/dashboard':  'Dashboard',
-  '/financeiro': 'Financeiro',
-  '/simulador':  'Simulador',
-  '/historico':  'Histórico',
-  '/relatorios': 'Relatórios',
+  '/dashboard':       'Dashboard',
+  '/financeiro':      'Financeiro',
+  '/simulador':       'Simulador',
+  '/historico':       'Histórico',
+  '/relatorios':      'Relatórios',
+  '/admin/usuarios':  'Usuários',
 }
 
 function LoadingScreen() {

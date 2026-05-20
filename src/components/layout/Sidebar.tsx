@@ -14,15 +14,17 @@ import {
   X,
   ChevronRight,
   Zap,
+  Users,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
-  { href: '/dashboard',  label: 'Dashboard',   icon: LayoutDashboard, description: 'Visão geral' },
-  { href: '/financeiro', label: 'Financeiro',   icon: BarChart3,       description: 'Análise financeira' },
-  { href: '/simulador',  label: 'Simulador',    icon: Calculator,      description: 'Calcular cotações' },
-  { href: '/historico',  label: 'Histórico',    icon: History,         description: 'Cotações salvas' },
-  { href: '/relatorios', label: 'Relatórios',   icon: FileText,        description: 'Exportar PDF' },
+  { href: '/dashboard',  label: 'Dashboard',   icon: LayoutDashboard, description: 'Visão geral',       adminOnly: false },
+  { href: '/financeiro', label: 'Financeiro',   icon: BarChart3,       description: 'Análise financeira', adminOnly: false },
+  { href: '/simulador',  label: 'Simulador',    icon: Calculator,      description: 'Calcular cotações',  adminOnly: false },
+  { href: '/historico',  label: 'Histórico',    icon: History,         description: 'Cotações salvas',    adminOnly: false },
+  { href: '/relatorios', label: 'Relatórios',   icon: FileText,        description: 'Exportar PDF',       adminOnly: false },
+  { href: '/admin/usuarios', label: 'Usuários', icon: Users,           description: 'Gerenciar usuários', adminOnly: true  },
 ]
 
 interface SidebarProps {
@@ -115,7 +117,7 @@ export default function Sidebar({ open = true, onClose }: SidebarProps) {
           <p className="text-[10px] font-bold uppercase tracking-[0.15em] px-3 pb-3" style={{ color: '#333' }}>
             Menu
           </p>
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {navItems.filter(item => !item.adminOnly || session?.user?.role === 'ADMIN').map(({ href, label, icon: Icon }) => {
             const active = pathname.startsWith(href)
             return (
               <Link
@@ -174,7 +176,15 @@ export default function Sidebar({ open = true, onClose }: SidebarProps) {
               {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-white truncate">{session?.user?.name}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-semibold text-white truncate">{session?.user?.name}</p>
+                {session?.user?.role === 'ADMIN' && (
+                  <span className="text-[9px] font-bold px-1 py-0.5 rounded flex-shrink-0"
+                    style={{ background: 'rgba(57,255,20,0.15)', color: '#39FF14', border: '1px solid rgba(57,255,20,0.2)' }}>
+                    ADMIN
+                  </span>
+                )}
+              </div>
               <p className="text-[10px] truncate" style={{ color: '#444' }}>{session?.user?.email}</p>
             </div>
           </div>

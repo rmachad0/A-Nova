@@ -19,6 +19,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'E-mail inválido.' }, { status: 400 })
     }
 
+    const DOMINIO_PERMITIDO = 'anovasolucao.net'
+    if (!email.toLowerCase().trim().endsWith(`@${DOMINIO_PERMITIDO}`)) {
+      return NextResponse.json(
+        { error: `Acesso restrito. Somente e-mails @${DOMINIO_PERMITIDO} podem se registrar.` },
+        { status: 403 }
+      )
+    }
+
     const existe = await prisma.user.findUnique({ where: { email: email.toLowerCase() } })
     if (existe) {
       return NextResponse.json({ error: 'Este e-mail já está cadastrado.' }, { status: 409 })
